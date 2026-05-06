@@ -7,7 +7,6 @@ export const validate = (schema: ZodType) => {
         const result = await schema.safeParseAsync(req.body);
 
         if (!result.success) {
-            // 💡 flatten()을 사용하면 에러가 필드명 기준으로 예쁘게 정리됩니다.
             const errorMessages = result.error.issues.map(issue => ({
                 field: issue.path.join("."),
                 message: issue.message,
