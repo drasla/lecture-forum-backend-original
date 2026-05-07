@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma";
-import { User } from "../generated/prisma/client";
+import { RoleType, User } from "../generated/prisma/client";
 import jwtUtil from "../utils/jwt/jwtUtil.ts";
 
 // 💡 1. Express의 Request를 확장하여 user 속성을 추가한 커스텀 타입 정의
@@ -62,4 +62,18 @@ export const authenticate = async (
         console.error(error);
         res.status(500).json({ error: "인증 처리 중 서버 에러가 발생했습니다." });
     }
+};
+
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+        res.status(401).json({ error: "인증 정보가 없습니다. 먼저 로그인해주세요." });
+        return;
+    }
+
+    if (req.user.role !== RoleType.ADMIN) {
+        res.status(403).json({ error: "해당 기능에 접근할 수 있는 관리자 권한이 없습니다." });
+        return;
+    }
+
+    next();
 };
