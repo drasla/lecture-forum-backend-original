@@ -2,8 +2,8 @@ import prisma from "../config/prisma.ts";
 import { UserCreateInput } from "../generated/prisma/models/User.ts";
 import { Prisma } from "../generated/prisma/client.ts";
 import { verifyPassword } from "../utils/password/passwordUtil.ts";
-import { generateToken } from "../utils/jwt/jwtUtil.ts";
 import { LoginInputType } from "../schemas/user/login.ts";
+import jwtUtil from "../utils/jwt/jwtUtil.ts";
 
 const createUser = async (data: UserCreateInput) => {
     try {
@@ -54,7 +54,7 @@ const login = async (data: LoginInputType) => {
     }
 
     // 3. 인증 성공 시 JWT 발급
-    const token = generateToken(user.id);
+    const token = jwtUtil.generateToken(user.id);
 
     // 4. 응답할 때 비밀번호는 빼고 안전한 정보만 반환 (Omit 처리)
     const { password, deletedAt, ...safeUserInfo } = user;
