@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import express from "express";
 import userRouter from "./routes/userRouter.ts";
-import authRouter from "./routes/authRouter.ts";
 
 dotenv.config();
 
@@ -11,7 +10,6 @@ const PORT = process.env.PORT || 8001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/auth", authRouter);
 app.use("/users", userRouter);
 
 app.listen(PORT, () => {
