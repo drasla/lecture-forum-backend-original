@@ -28,19 +28,19 @@ const createUser = async (req: Request, res: Response) => {
             // Service에서 던진 Custom Error 분기 처리
             switch (error.message) {
                 case "ALREADY_EXISTS_USERNAME":
-                    res.status(409).json({ error: "이미 사용 중인 아이디입니다." });
+                    res.status(409).json({ message: "이미 사용 중인 아이디입니다." });
                     return;
                 case "ALREADY_EXISTS_EMAIL":
-                    res.status(409).json({ error: "이미 가입된 이메일입니다." });
+                    res.status(409).json({ message: "이미 가입된 이메일입니다." });
                     return;
                 case "ALREADY_EXISTS_NICKNAME":
-                    res.status(409).json({ error: "이미 사용 중인 닉네임입니다." });
+                    res.status(409).json({ message: "이미 사용 중인 닉네임입니다." });
                     return;
             }
         }
 
         console.log(error);
-        res.status(500).json({ error: "유저 생성 중 오류가 발생했습니다." });
+        res.status(500).json({ message: "유저 생성 중 오류가 발생했습니다." });
     }
 };
 
@@ -58,13 +58,13 @@ const login = async (req: Request, res: Response) => {
     } catch (error) {
         if (error instanceof Error) {
             if (error.message === "INVALID_CREDENTIALS") {
-                res.status(401).json({ error: "아이디 또는 비밀번호가 일치하지 않습니다." });
+                res.status(401).json({ message: "아이디 또는 비밀번호가 일치하지 않습니다." });
                 return;
             }
         }
 
         console.error(error);
-        res.status(500).json({ error: "로그인 처리 중 서버 에러가 발생했습니다." });
+        res.status(500).json({ message: "로그인 처리 중 서버 에러가 발생했습니다." });
     }
 };
 
