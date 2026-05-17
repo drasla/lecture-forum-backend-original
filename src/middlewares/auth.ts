@@ -39,7 +39,7 @@ export const authenticate = async (
         });
 
         if (!user || user.deletedAt) {
-            res.status(401).json({ error: "유효하지 않은 유저이거나 탈퇴한 계정입니다." });
+            res.status(401).json({ message: "유효하지 않은 유저이거나 탈퇴한 계정입니다." });
             return;
         }
 
@@ -51,27 +51,27 @@ export const authenticate = async (
     } catch (error) {
         // 💡 jwt 라이브러리에서 발생하는 대표적인 에러 두 가지를 예쁘게 처리
         if (error instanceof jwt.TokenExpiredError) {
-            res.status(401).json({ error: "인증 토큰이 만료되었습니다. 다시 로그인해주세요." });
+            res.status(401).json({ message: "인증 토큰이 만료되었습니다. 다시 로그인해주세요." });
             return;
         }
         if (error instanceof jwt.JsonWebTokenError) {
-            res.status(401).json({ error: "유효하지 않은 인증 토큰입니다." });
+            res.status(401).json({ message: "유효하지 않은 인증 토큰입니다." });
             return;
         }
 
         console.error(error);
-        res.status(500).json({ error: "인증 처리 중 서버 에러가 발생했습니다." });
+        res.status(500).json({ message: "인증 처리 중 서버 에러가 발생했습니다." });
     }
 };
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
-        res.status(401).json({ error: "인증 정보가 없습니다. 먼저 로그인해주세요." });
+        res.status(401).json({ message: "인증 정보가 없습니다. 먼저 로그인해주세요." });
         return;
     }
 
     if (req.user.role !== RoleType.ADMIN) {
-        res.status(403).json({ error: "해당 기능에 접근할 수 있는 관리자 권한이 없습니다." });
+        res.status(403).json({ message: "해당 기능에 접근할 수 있는 관리자 권한이 없습니다." });
         return;
     }
 

@@ -6,7 +6,7 @@ import { loginSchema } from "../schemas/user/login.ts";
 
 const router = Router();
 
-router.post("/", validate(createUserSchema), userController.createUser);
+router.post("/create", validate(createUserSchema), userController.createUser);
 router.post("/login", validate(loginSchema), userController.login);
 
 export default router;
