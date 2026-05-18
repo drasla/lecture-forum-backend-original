@@ -1,9 +1,9 @@
 import prisma from "../config/prisma.ts";
 import { UserCreateInput } from "../generated/prisma/models/User.ts";
-import { Prisma } from "../generated/prisma/client.ts";
 import { verifyPassword } from "../utils/password/passwordUtil.ts";
 import { LoginInputType } from "../schemas/user/login.ts";
 import jwtUtil from "../utils/jwt/jwtUtil.ts";
+import errorUtil from "../utils/error/errorUtil.ts";
 
 const createUser = async (data: UserCreateInput) => {
     try {
@@ -11,28 +11,7 @@ const createUser = async (data: UserCreateInput) => {
             data,
         });
     } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            // 💡 2. P2002 코드는 'Unique constraint failed (중복 데이터)'를 의미합니다.
-            if (error.code === "P2002") {
-                // error.meta.target 에는 중복이 발생한 컬럼명이 배열로 들어있습니다. (예: ['email'])
-                const target = error.meta?.target as string[];
-
-                if (target?.includes("username")) {
-                    throw new Error("ALREADY_EXISTS_USERNAME");
-                }
-                if (target?.includes("email")) {
-                    throw new Error("ALREADY_EXISTS_EMAIL");
-                }
-                if (target?.includes("nickname")) {
-                    throw new Error("ALREADY_EXISTS_NICKNAME");
-                }
-
-                throw new Error("ALREADY_EXISTS_DATA");
-            }
-        }
-
-        // Prisma P2002 에러가 아니라면 예상치 못한 에러이므로 그대로 다시 던집니다.
-        throw error;
+        errorUtil.handlePrismaDuplicateError(error);
     }
 };
 
