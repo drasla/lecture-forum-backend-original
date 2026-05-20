@@ -2,26 +2,60 @@ import prisma from "../../config/prisma.ts";
 import { UserCreateInput, UserUpdateInput } from "../../generated/prisma/models/User.ts";
 import errorUtil from "../../utils/error/errorUtil.ts";
 
+const userSelectFields = {
+    id: true,
+    username: true,
+    name: true,
+    nickname: true,
+    email: true,
+    phoneNumber: true,
+    birthdate: true,
+    gender: true,
+    role: true,
+    createdAt: true,
+    deletedAt: true,
+};
+
 const createUser = async (data: UserCreateInput) => {
     try {
         return await prisma.user.create({
             data,
+            select: userSelectFields,
         });
     } catch (error) {
         errorUtil.handlePrismaDuplicateError(error);
     }
 };
 
-const getUserList = async () => {
-    return prisma.user.findMany({
+const getUserList = async (page: number = 1, size: number = 10) => {
+    const skip = (page - 1) * size;
+    const take = size;
+
+    // 💡 1. 전체 유저 수 구하기 (트랜잭션으로 묶거나 개별로 호출)
+    const total = await prisma.user.count();
+
+    // 💡 2. 페이지네이션이 적용된 데이터 조회
+    const list = await prisma.user.findMany({
+        select: userSelectFields,
         orderBy: { createdAt: "desc" },
+        skip,
+        take,
     });
+
+    // 💡 3. 요청하신 객체 형태로 반환
+    return {
+        page,
+        size,
+        total,
+        list,
+    };
 };
 
 // 3. 단일 유저 조회
 const getUserById = async (id: number) => {
     const user = await prisma.user.findUnique({
         where: { id },
+        select: userSelectFields,
     });
 
     if (!user) throw new Error("USER_NOT_FOUND");
@@ -37,6 +71,7 @@ const updateUser = async (id: number, data: UserUpdateInput) => {
         return await prisma.user.update({
             where: { id },
             data,
+            select: userSelectFields,
         });
     } catch (error) {
         errorUtil.handlePrismaDuplicateError(error);

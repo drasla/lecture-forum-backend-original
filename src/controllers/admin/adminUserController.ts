@@ -41,8 +41,11 @@ const createUser = async (req: Request, res: Response) => {
 
 const getUserList = async (req: Request, res: Response) => {
     try {
-        const users = await adminUserService.getUserList();
-        res.status(200).json({ message: "유저 목록을 성공적으로 불러왔습니다.", data: users });
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const size = parseInt(req.query.size as string, 10) || 10;
+
+        const result = await adminUserService.getUserList(page, size);
+        res.status(200).json({ message: "유저 목록을 성공적으로 불러왔습니다.", data: result });
     } catch (error) {
         res.status(500).json({ message: "서버 에러가 발생했습니다." });
     }
