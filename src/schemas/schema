@@ -1,0 +1,167 @@
+Enum gender_type {
+  MALE
+  FEMALE
+}
+
+Enum role_type {
+  ADMIN
+  USER
+}
+
+Enum like_status {
+  LIKES
+  DISLIKES
+}
+
+// 파일이 첨부되는 출처를 구분하기 위한 Enum
+Enum file_target_type {
+  POST
+  NOTICE
+  INQUIRY
+}
+
+Table users {
+  id int [pk, increment, note: '고유식별자']
+  created_at datetime [default: `now()`, note: '생성일자']
+  updated_at datetime [note: '수정일자']
+  deleted_at datetime [note: '탈퇴일자 (Soft Delete)']
+  username varchar(20) [not null, unique, note: '유저네임']
+  password varchar(100) [not null, note: '비밀번호']
+  name varchar(10) [not null, note: '이름']
+  nickname varchar(50) [not null, unique, note: '닉네임']
+  email varchar(100) [not null, unique, note: '이메일']
+  phoneNumber varchar(15) [note: '전화번호']
+  birthdate date [note: '생년월일']
+  gender gender_type [note: '성별']
+  profilePicture varchar(100) [note: '프로필사진 URL']
+  intro text [note: '자기소개']
+  role role_type [default: 'USER', note: '권한 (ADMIN, USER)']
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar(50) [not null, note: '카테고리명']
+  icon varchar(100) [note: '아이콘 URL']
+}
+
+Table posts {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  updated_at datetime [note: '수정일자']
+  deleted_at datetime [note: '삭제일자 (Soft Delete)']
+  title varchar(100) [not null, note: '제목']
+  content text [not null, note: '내용']
+  views int [default: 0, note: '조회수']
+  user_id int
+  category_id int
+}
+
+Ref: posts.user_id > users.id
+Ref: posts.category_id > categories.id
+
+
+Table replies {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  updated_at datetime [note: '수정일자']
+  deleted_at datetime [note: '삭제일자 (Soft Delete)']
+  content text [not null, note: '내용']
+  user_id int
+  post_id int
+}
+
+Ref: replies.user_id > users.id
+Ref: replies.post_id > posts.id
+
+
+Table notices {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  updated_at datetime [note: '수정일자']
+  deleted_at datetime [note: '삭제일자 (Soft Delete)']
+  title varchar(100) [not null, note: '제목']
+  content text [not null, note: '내용']
+  user_id int
+}
+
+Ref: notices.user_id > users.id
+
+Table inquiries {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  updated_at datetime [note: '수정일자']
+  title varchar(100) [not null, note: '제목']
+  content text [not null, note: '내용']
+  answer text [note: '답변 (null 허용, 값이 있으면 답변완료)']
+  answer_at datetime [note: '작성일자 (null 허용)']
+  user_id int
+}
+
+Ref: inquiries.user_id > users.id
+
+
+Table favorites {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  user_id int
+  post_id int
+
+  Indexes {
+    (user_id, post_id) [unique, note: '중복 북마크 방지']
+  }
+}
+
+Ref: favorites.user_id > users.id
+Ref: favorites.post_id > posts.id
+
+
+Table likes_posts {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  status like_status [not null, note: '상태 (LIKES, DISLIKES)']
+  user_id int
+  post_id int
+
+  Indexes {
+    (user_id, post_id) [unique, note: '게시글 중복 투표 방지']
+  }
+}
+
+Ref: likes_posts.user_id > users.id
+Ref: likes_posts.post_id > posts.id
+
+
+Table likes_replies {
+  id int [pk, increment]
+  created_at datetime [default: `now()`, note: '생성일자']
+  status like_status [not null, note: '상태 (LIKES, DISLIKES']
+  user_id int
+  reply_id int
+
+  Indexes {
+    (user_id, reply_id) [unique, note: '댓글 중복 투표 방지']
+  }
+}
+
+Ref: likes_replies.user_id > users.id
+Ref: likes_replies.reply_id > replies.id
+
+
+// 파일 히스토리 관리 테이블
+Table files {
+  id int [pk, increment]
+  target_type file_target_type [not null, note: '파일이 첨부된 곳 (POST, NOTICE 등)']
+  target_id int [not null, note: '게시글/공지사항 등의 ID']
+  original_name varchar(255) [not null, note: '사용자가 업로드한 원본 파일명']
+  file_url varchar(255) [not null, note: '실제 저장된 파일 경로/URL']
+  file_size int [note: '파일 크기 (Byte 단위)']
+  created_at datetime [default: `now()`, note: '업로드 일자']
+  deleted_at datetime [note: '삭제 일자 (null이 아니면 삭제/교체된 파일 히스토리)']
+  user_id int [not null, note: '업로드한 유저']
+
+  Indexes {
+    (target_type, target_id) [note: '특정 게시글의 파일 목록을 빠르게 찾기 위한 인덱스']
+  }
+}
+
+Ref: files.user_id > users.id
