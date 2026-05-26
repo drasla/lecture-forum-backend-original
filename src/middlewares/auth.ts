@@ -3,10 +3,17 @@ import jwt from "jsonwebtoken";
 import prisma from "../config/prisma";
 import { RoleType, User } from "../generated/prisma/client";
 import jwtUtil from "../utils/jwt/jwtUtil.ts";
+import * as core from "express-serve-static-core";
 
 // 💡 1. Express의 Request를 확장하여 user 속성을 추가한 커스텀 타입 정의
 // 비밀번호 등 민감한 정보는 Omit으로 제외하는 것이 안전합니다.
-export interface AuthRequest extends Request {
+export interface AuthRequest<
+    P = core.ParamsDictionary,
+    ResBody = any,
+    ReqBody = any,
+    ReqQuery = core.Query,
+    Locals extends Record<string, any> = Record<string, any>,
+> extends Request<P, ResBody, ReqBody, ReqQuery, Locals> {
     user?: Omit<User, "password" | "deletedAt">;
 }
 

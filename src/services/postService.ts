@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.ts";
+import { PostCreateInput, PostUpdateInput } from "../generated/prisma/models/Post.ts";
 
 const getPostByCategory = async (categoryId: number, page: number = 1, size: number = 10) => {
     const skip = (page - 1) * size;
@@ -34,6 +35,116 @@ const getPostByCategory = async (categoryId: number, page: number = 1, size: num
     return { total, list };
 };
 
+const getPostById = async (id: number) => {
+    const post = await prisma.post.findFirst({
+        where: {
+            id,
+            deletedAt: null,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    nickname: true,
+                    name: true,
+                }
+            },
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                }
+            }
+        }
+    });
+
+    if (!post) {
+        return null;
+    }
+
+    await prisma.post.update({
+        where: {
+            id
+        },
+        data: {
+            views: { increment: 1 }
+        }
+    });
+
+    return { ...post, views: post.views + 1 }
+}
+
+const createPost = async (data: PostCreateInput) => {
+    return prisma.post.create({
+        data,
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    nickname: true,
+                    name: true,
+                },
+            },
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+        },
+    });
+};
+
+const updatePost = async (id: number, userId: number, data: PostUpdateInput) => {
+    const post = await prisma.post.findFirst({
+        where: { id, deletedAt: null },
+    });
+
+    if (!post) {
+        throw new Error("NOT_FOUND"); // 게시글이 없거나 삭제됨
+    }
+
+    if (post.userId !== userId) {
+        throw new Error("FORBIDDEN"); // 작성자가 아님
+    }
+
+    // 2. 권한이 확인되면 업데이트 수행
+    return prisma.post.update({
+        where: { id },
+        data,
+        include: {
+            user: { select: { id: true, nickname: true, name: true } },
+            category: { select: { id: true, name: true } },
+        },
+    });
+};
+
+const deletePost = async (id: number, userId: number) => {
+    const post = await prisma.post.findFirst({
+        where: { id, deletedAt: null },
+    });
+
+    if (!post) {
+        throw new Error("NOT_FOUND");
+    }
+
+    if (post.userId !== userId) {
+        throw new Error("FORBIDDEN"); // 작성자가 아니면 삭제 불가
+    }
+
+    // 2. 소프트 삭제 처리 (deletedAt에 현재 시간 기록)
+    return prisma.post.update({
+        where: { id },
+        data: {
+            deletedAt: new Date(),
+        },
+    });
+};
+
 export default {
     getPostByCategory,
+    getPostById,
+    createPost,
+    updatePost,
+    deletePost,
 };
