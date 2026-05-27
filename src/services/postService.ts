@@ -35,7 +35,7 @@ const getPostByCategory = async (categoryId: number, page: number = 1, size: num
     return { total, list };
 };
 
-const getPostById = async (id: number) => {
+const getPostById = async (id: number, userId?: number) => {
     const post = await prisma.post.findFirst({
         where: {
             id,
@@ -47,32 +47,57 @@ const getPostById = async (id: number) => {
                     id: true,
                     nickname: true,
                     name: true,
-                }
+                },
             },
             category: {
                 select: {
                     id: true,
                     name: true,
-                }
-            }
-        }
+                },
+            },
+        },
     });
 
     if (!post) {
         return null;
     }
 
-    await prisma.post.update({
-        where: {
-            id
-        },
-        data: {
-            views: { increment: 1 }
-        }
+    const option1Count = await prisma.vote.count({
+        where: { postId: id, option: 1 },
     });
 
-    return { ...post, views: post.views + 1 }
-}
+    const option2Count = await prisma.vote.count({
+        where: { postId: id, option: 2 },
+    });
+
+    let hasVoted = false;
+    if (userId) {
+        const myVote = await prisma.vote.findUnique({
+            where: {
+                userId_postId: { userId, postId: id },
+            },
+        });
+
+        if (myVote) {
+            hasVoted = true;
+        }
+    }
+
+    await prisma.post.update({
+        where: {
+            id,
+        },
+        data: {
+            views: { increment: 1 },
+        },
+    });
+
+    return {
+        ...post,
+        views: post.views + 1,
+        vote: { option1Count, option2Count, totalCount: option1Count + option2Count, hasVoted },
+    };
+};
 
 const createPost = async (data: PostCreateInput) => {
     return prisma.post.create({

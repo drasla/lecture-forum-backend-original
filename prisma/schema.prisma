@@ -43,6 +43,7 @@ model User {
   role        RoleType   @default(USER)
 
   posts Post[]
+  votes Vote[]
 }
 
 model Category {
@@ -56,16 +57,38 @@ model Category {
 }
 
 model Post {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  title     String
-  content   String    @db.Text
-  views     Int       @default(0)
+  id          Int       @id @default(autoincrement())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  title       String
+  content     String    @db.Text
+  views       Int       @default(0)
+  option1Text String?
+  option2Text String?
 
   userId     Int
   categoryId Int
   user       User     @relation(fields: [userId], references: [id])
   category   Category @relation(fields: [categoryId], references: [id])
+  votes      Vote[]
+}
+
+model Vote {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 투표한 유저 정보
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+  // 투표 대상 게시글 정보
+  postId Int
+  post   Post @relation(fields: [postId], references: [id])
+
+  // 선택한 항목 (1 또는 2만 들어오도록 서버/DB단에서 검증)
+  option Int
+
+  // 💡 중요 제약조건: 한 명의 유저는 하나의 게시글에 "딱 한 번만" 투표할 수 있음 (중복 투표 방지)
+  @@unique([userId, postId])
 }
