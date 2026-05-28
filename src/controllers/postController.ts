@@ -197,6 +197,34 @@ const votePost = async (req: AuthRequest<{ id: string }>, res: Response) => {
     }
 };
 
+const deleteVote = async (req: AuthRequest<{ id: string }>, res: Response) => {
+    try {
+        const postId = parseInt(req.params.id, 10);
+        if (isNaN(postId)) {
+            return res.status(400).json({ message: "유효하지 않은 게시글 ID입니다." });
+        }
+
+        if (!req.user) {
+            return res.status(401).json({ message: "로그인이 필요한 서비스입니다." });
+        }
+        const userId = req.user.id;
+
+        await postService.deleteVote(postId, userId);
+
+        res.status(200).json({
+            message: "투표가 취소되었습니다. 다시 선택해 주세요!",
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "NOT_VOTED") {
+                return res.status(404).json({ message: "취소할 투표 내역이 없습니다." });
+            }
+        }
+        console.error(error);
+        res.status(500).json({ message: "투표 취소 중 서버 에러가 발생했습니다." });
+    }
+};
+
 export default {
     getPostsByCategory,
     getPostById,
@@ -204,4 +232,5 @@ export default {
     updatePost,
     deletePost,
     votePost,
+    deleteVote,
 };

@@ -15,5 +15,6 @@ router.post("/create", validate(createPostSchema), authenticate, postController.
 router.patch("/:id", validate(updatePostSchema), authenticate, postController.updatePost);
 router.delete("/:id", authenticate, postController.deletePost);
 router.post("/:id/vote", validate(votePostSchema), authenticate, postController.votePost);
+router.delete("/:id/vote", authenticate, postController.deleteVote);
 
 export default router;

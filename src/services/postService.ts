@@ -202,6 +202,26 @@ const votePost = async (postId: number, userId: number, option: number) => {
     });
 };
 
+const deleteVote = async (postId: number, userId: number) => {
+    // 1. 유저의 투표 내역이 존재하는지 확인
+    const vote = await prisma.vote.findUnique({
+        where: {
+            userId_postId: { userId, postId },
+        },
+    });
+
+    if (!vote) {
+        throw new Error("NOT_VOTED"); // 취소할 투표가 없음
+    }
+
+    // 2. 투표 내역 삭제
+    return prisma.vote.delete({
+        where: {
+            userId_postId: { userId, postId },
+        },
+    });
+};
+
 export default {
     getPostByCategory,
     getPostById,
@@ -209,4 +229,5 @@ export default {
     updatePost,
     deletePost,
     votePost,
+    deleteVote,
 };
