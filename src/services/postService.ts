@@ -166,10 +166,47 @@ const deletePost = async (id: number, userId: number) => {
     });
 };
 
+const votePost = async (postId: number, userId: number, option: number) => {
+    // 1. 게시글 존재 및 삭제 여부 확인
+    const post = await prisma.post.findFirst({
+        where: { id: postId, deletedAt: null },
+    });
+
+    if (!post) {
+        throw new Error("NOT_FOUND");
+    }
+
+    // 2. 투표가 활성화된 게시글인지 확인
+    if (!post.option1Text || !post.option2Text) {
+        throw new Error("NOT_VOTABLE");
+    }
+
+    // 3. 이미 투표했는지 확인 (DB 복합 유니크 제약조건을 서비스 단에서 한 번 더 검증)
+    const existingVote = await prisma.vote.findUnique({
+        where: {
+            userId_postId: { userId, postId },
+        },
+    });
+
+    if (existingVote) {
+        throw new Error("ALREADY_VOTED");
+    }
+
+    // 4. 모든 검증을 통과하면 투표 기록 생성
+    return prisma.vote.create({
+        data: {
+            userId,
+            postId,
+            option,
+        },
+    });
+};
+
 export default {
     getPostByCategory,
     getPostById,
     createPost,
     updatePost,
     deletePost,
+    votePost,
 };

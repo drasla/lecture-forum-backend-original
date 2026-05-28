@@ -4,6 +4,7 @@ import { CreatePostInputType } from "../schemas/post/createPostSchema.ts";
 import { PostCreateInput, PostUpdateInput } from "../generated/prisma/models/Post.ts";
 import { AuthRequest } from "../middlewares/auth.ts";
 import { UpdatePostInputType } from "../schemas/post/updatePostSchema.ts";
+import { VotePostInputType } from "../schemas/post/votePostSchema.ts";
 
 const getPostsByCategory = async (req: Request<{ categoryId: string }>, res: Response) => {
     try {
@@ -160,10 +161,47 @@ const deletePost = async (req: AuthRequest<{ id: string }>, res: Response) => {
     }
 };
 
+const votePost = async (req: AuthRequest<{ id: string }>, res: Response) => {
+    try {
+        const postId = parseInt(req.params.id, 10);
+        if (isNaN(postId)) {
+            return res.status(400).json({ message: "유효하지 않은 게시글 ID입니다." });
+        }
+
+        const { option }: VotePostInputType = req.body;
+
+        if (!req.user) {
+            return res.status(401).json({ message: "로그인이 필요한 서비스입니다." });
+        }
+        const userId = req.user.id;
+
+        await postService.votePost(postId, userId, option);
+
+        res.status(200).json({
+            message: "소중한 한 표가 전황에 반영되었습니다!",
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "NOT_FOUND") {
+                return res.status(404).json({ message: "존재하지 않거나 삭제된 게시글입니다." });
+            }
+            if (error.message === "NOT_VOTABLE") {
+                return res.status(400).json({ message: "투표가 활성화되지 않은 게시글입니다." });
+            }
+            if (error.message === "ALREADY_VOTED") {
+                return res.status(409).json({ message: "이미 투표에 참여하셨습니다." });
+            }
+        }
+        console.error(error);
+        res.status(500).json({ message: "투표 처리 중 서버 에러가 발생했습니다." });
+    }
+};
+
 export default {
     getPostsByCategory,
     getPostById,
     createPost,
     updatePost,
     deletePost,
+    votePost,
 };

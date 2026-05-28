@@ -4,6 +4,7 @@ import { validate } from "../middlewares/validate.ts";
 import { createPostSchema } from "../schemas/post/createPostSchema.ts";
 import { updatePostSchema } from "../schemas/post/updatePostSchema.ts";
 import { authenticate } from "../middlewares/auth.ts";
+import { votePostSchema } from "../schemas/post/votePostSchema.ts";
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.get("/:id", postController.getPostById);
 router.post("/create", validate(createPostSchema), authenticate, postController.createPost);
 router.patch("/:id", validate(updatePostSchema), authenticate, postController.updatePost);
 router.delete("/:id", authenticate, postController.deletePost);
+router.post("/:id/vote", validate(votePostSchema), authenticate, postController.votePost);
 
 export default router;

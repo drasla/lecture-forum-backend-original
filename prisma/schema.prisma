@@ -50,7 +50,7 @@ model Category {
   id        Int            @id @default(autoincrement())
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
-  name      String
+  name      String         @unique
   status    CategoryStatus @default(ACTIVE)
 
   posts Post[]
