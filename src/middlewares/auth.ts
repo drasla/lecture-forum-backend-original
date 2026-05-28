@@ -71,6 +71,43 @@ export const authenticate = async (
     }
 };
 
+export const optionalAuthenticate = async (
+    req: AuthRequest,
+    _: Response,
+    next: NextFunction,
+): Promise<void> => {
+    try {
+        const authHeader = req.headers.authorization;
+        // 💡 1. 토큰이 없어도 에러 내지 않고 조용히 다음으로 통과 (req.user는 undefined 상태)
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return next();
+        }
+
+        const token = authHeader.split(" ")[1];
+        if (!token) {
+            return next();
+        }
+
+        // 💡 2. 토큰 검증
+        const decoded = jwtUtil.verifyToken(token);
+
+        const user = await prisma.user.findUnique({
+            where: { id: decoded.id },
+        });
+
+        // 💡 3. 유효한 유저일 경우에만 req.user에 안전하게 정보 할당
+        if (user && !user.deletedAt) {
+            const { password, deletedAt, ...safeUser } = user;
+            req.user = safeUser;
+        }
+
+        next();
+    } catch (error) {
+        // 💡 4. 토큰 만료, 위조 등의 에러가 터져도 조용히 통과시킴 (비로그인 게스트 취급)
+        next();
+    }
+};
+
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
         res.status(401).json({ message: "인증 정보가 없습니다. 먼저 로그인해주세요." });

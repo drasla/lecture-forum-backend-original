@@ -72,11 +72,13 @@ const getPostById = async (id: number, userId?: number) => {
 
     let hasVoted = false;
     if (userId) {
-        const myVote = await prisma.vote.findUnique({
+        const myVote = await prisma.vote.findFirst({
             where: {
-                userId_postId: { userId, postId: id },
+                userId: userId,
+                postId: id,
             },
         });
+
 
         if (myVote) {
             hasVoted = true;
