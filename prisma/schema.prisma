@@ -42,8 +42,9 @@ model User {
   gender      GenderType
   role        RoleType   @default(USER)
 
-  posts Post[]
-  votes Vote[]
+  posts   Post[]
+  votes   Vote[]
+  replies Reply[]
 }
 
 model Category {
@@ -72,6 +73,7 @@ model Post {
   user       User     @relation(fields: [userId], references: [id])
   category   Category @relation(fields: [categoryId], references: [id])
   votes      Vote[]
+  replies    Reply[]
 }
 
 model Vote {
@@ -91,4 +93,19 @@ model Vote {
 
   // 💡 중요 제약조건: 한 명의 유저는 하나의 게시글에 "딱 한 번만" 투표할 수 있음 (중복 투표 방지)
   @@unique([userId, postId])
+}
+
+model Reply {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  content   String   @db.Text
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+  postid Int
+  post   Post @relation(fields: [postid], references: [id])
+
+  @@index([postid])
+  @@index([userId])
 }
