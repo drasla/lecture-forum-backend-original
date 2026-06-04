@@ -48,6 +48,28 @@ const getRepliesByPostId = async (postId: number, page: number = 1, size: number
     return { total, list };
 };
 
+const updateReply = async (id: number, userId: number, content: string) => {
+    // 1. 수정할 댓글이 존재하는지 확인
+    const reply = await prisma.reply.findUnique({
+        where: { id },
+    });
+
+    if (!reply) {
+        throw new Error("NOT_FOUND_REPLY");
+    }
+
+    // 2. 본인이 작성한 댓글인지 확인 (권한 검증)
+    if (reply.userId !== userId) {
+        throw new Error("FORBIDDEN");
+    }
+
+    // 3. 내용 업데이트
+    return prisma.reply.update({
+        where: { id },
+        data: { content },
+    });
+};
+
 // 💡 3. 댓글 완전 삭제 (하드 삭제)
 const deleteReply = async (id: number, userId: number) => {
     const reply = await prisma.reply.findUnique({
@@ -71,5 +93,6 @@ const deleteReply = async (id: number, userId: number) => {
 export default {
     createReply,
     getRepliesByPostId,
+    updateReply,
     deleteReply,
 };

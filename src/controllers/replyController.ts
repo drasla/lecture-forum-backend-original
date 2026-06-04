@@ -54,6 +54,40 @@ const getReplies = async (req: Request<{ postId: string }>, res: Response) => {
     }
 };
 
+const updateReply = async (req: AuthRequest<{ id: string }>, res: Response) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) {
+            return res.status(400).json({ message: "유효하지 않은 댓글 ID입니다." });
+        }
+
+        const { content } = req.body; // 검증 미들웨어를 통과한 안전한 데이터
+
+        if (!req.user) {
+            return res.status(401).json({ message: "로그인이 필요한 서비스입니다." });
+        }
+        const userId = req.user.id;
+
+        const updatedReply = await replyService.updateReply(id, userId, content);
+
+        res.status(200).json({
+            message: "댓글이 성공적으로 수정되었습니다.",
+            data: updatedReply,
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "NOT_FOUND_REPLY") {
+                return res.status(404).json({ message: "존재하지 않는 댓글입니다." });
+            }
+            if (error.message === "FORBIDDEN") {
+                return res.status(403).json({ message: "댓글을 수정할 권한이 없습니다." });
+            }
+        }
+        console.error(error);
+        res.status(500).json({ message: "댓글 수정 중 서버 에러가 발생했습니다." });
+    }
+};
+
 const deleteReply = async (req: AuthRequest<{ id: string }>, res: Response) => {
     try {
         const id = parseInt(req.params.id, 10);
@@ -88,5 +122,6 @@ const deleteReply = async (req: AuthRequest<{ id: string }>, res: Response) => {
 export default {
     createReply,
     getReplies,
+    updateReply,
     deleteReply,
 };
