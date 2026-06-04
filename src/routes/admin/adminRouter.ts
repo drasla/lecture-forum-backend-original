@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireAdmin } from "../../middlewares/auth.ts";
 import adminCategoryRouter from "./category/adminCategoryRouter.ts";
 import adminUserRouter from "./category/adminUserRouter.ts";
+import adminNoticeRouter from "./adminNoticeRouter.ts";
 
 const router = Router();
 
@@ -10,5 +11,6 @@ router.use(authenticate, requireAdmin);
 
 router.use("/user", adminUserRouter);
 router.use("/category", adminCategoryRouter);
+router.use("/notice", adminNoticeRouter);
 
 export default router;
