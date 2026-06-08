@@ -7,6 +7,7 @@ import categoryRouter from "./routes/categoryRouter.ts";
 import postRouter from "./routes/postRouter.ts";
 import replyRouter from "./routes/replyRouter.ts";
 import noticeRouter from "./routes/noticeRouter.ts";
+import inquiryRouter from "./routes/inquiryRouter.ts";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use("/category", categoryRouter);
 app.use("/notice", noticeRouter);
 app.use("/post", postRouter);
 app.use("/reply", replyRouter);
+app.use("/inquiry", inquiryRouter);
 
 app.listen(PORT, () => {
     console.log(`Server listening on : http://localhost:${PORT}`);
