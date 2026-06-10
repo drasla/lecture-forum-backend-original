@@ -3,6 +3,9 @@ import { Request, Response } from "express";
 import { UserCreateInput } from "../generated/prisma/models/User.ts";
 import passwordUtil from "../utils/password/passwordUtil.ts";
 import { LoginInputType } from "../schemas/user/login.ts";
+import { AuthRequest } from "../middlewares/auth.ts";
+import { UpdateUserInputType } from "../schemas/user/updateUserSchema.ts";
+import { UpdatePasswordInputType } from "../schemas/user/updatePasswordSchema.ts";
 
 const createUser = async (req: Request, res: Response) => {
     try {
@@ -44,6 +47,51 @@ const createUser = async (req: Request, res: Response) => {
     }
 };
 
+const updateUser = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user!.id;
+        const data: UpdateUserInputType = req.body;
+
+        const updatedUser = await userService.updateUser(userId, data);
+        res.status(200).json({
+            message: "회원 정보가 성공적으로 수정되었습니다.",
+            data: updatedUser,
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "ALREADY_EXISTS_NICKNAME") {
+                return res.status(409).json({ message: "이미 사용 중인 닉네임입니다." });
+            }
+            if (error.message === "ALREADY_EXISTS_EMAIL") {
+                return res.status(409).json({ message: "이미 사용 중인 이메일입니다." });
+            }
+        }
+        console.error(error);
+        res.status(500).json({ message: "회원 정보 수정 중 오류가 발생했습니다." });
+    }
+};
+
+const updatePassword = async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user!.id;
+        const { currentPassword, newPassword }: UpdatePasswordInputType = req.body;
+
+        await userService.updatePassword(userId, currentPassword, newPassword);
+        res.status(200).json({ message: "비밀번호가 성공적으로 변경되었습니다." });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "NOT_FOUND_USER") {
+                return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+            }
+            if (error.message === "INVALID_CURRENT_PASSWORD") {
+                return res.status(401).json({ message: "현재 비밀번호가 일치하지 않습니다." });
+            }
+        }
+        console.error(error);
+        res.status(500).json({ message: "비밀번호 변경 중 오류가 발생했습니다." });
+    }
+};
+
 const login = async (req: Request, res: Response) => {
     try {
         // validate 미들웨어를 통과했으므로 타입이 보장됩니다.
@@ -70,5 +118,7 @@ const login = async (req: Request, res: Response) => {
 
 export default {
     createUser,
+    updateUser,
+    updatePassword,
     login,
 };
