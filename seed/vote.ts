@@ -1,5 +1,6 @@
 import prisma from "../src/config/prisma.ts";
 import postService from "../src/services/postService.ts";
+import { User } from "../src/generated/prisma/client.ts";
 
 async function seedVotes() {
     console.log("🚀 백엔드 다이렉트 투표(Vote) 시딩을 시작합니다...");
@@ -28,13 +29,19 @@ async function seedVotes() {
 
         // 2. 모든 게시글을 순회하며 투표를 진행합니다.
         for (const post of posts) {
-            // 이 글에 투표할 랜덤 인원수 결정 (예: 최소 5명 ~ 최대 35명)
-            // 단, 현재 DB에 있는 총 유저 수를 넘지 않도록 Math.min 처리
             const targetVoteCount = Math.min(Math.floor(Math.random() * 30) + 5, users.length);
 
-            // 💡 중복 투표(Unique Constraint) 에러를 방지하기 위해 유저 배열을 섞고 앞에서부터 자릅니다.
-            const shuffledUsers = [...users].sort(() => 0.5 - Math.random());
-            const selectedUsers = shuffledUsers.slice(0, targetVoteCount);
+            // 💡 셔플 없이, 중복되지 않게 필요한 인원만큼만 무작위 추출
+            const selectedUsers: Pick<User, "id">[] = [];
+
+            while (selectedUsers.length < targetVoteCount) {
+                const randomUser = users[Math.floor(Math.random() * users.length)];
+
+                // 이미 뽑은 유저가 아닐 때만 결과 배열에 추가 (중복 원천 차단)
+                if (randomUser && !selectedUsers.includes(randomUser)) {
+                    selectedUsers.push(randomUser);
+                }
+            }
 
             console.log(
                 `📊 [Post ID: ${post.id}] "${post.title.slice(0, 15)}..." -> ${targetVoteCount}명 투표 진행 중...`,

@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-// 1. 사용자: 문의 작성 스키마
 export const inquirySchema = z.object({
-    title: z.string().min(1, "문의 제목을 입력해주세요."),
-    content: z.string().min(1, "문의 내용을 입력해주세요."),
+    title: z.string().min(1, "제목은 필수 입력 항목입니다."),
+    content: z.string().min(1, "내용은 필수 입력 항목입니다."),
 });
+
 export type InquiryInputType = z.infer<typeof inquirySchema>;
