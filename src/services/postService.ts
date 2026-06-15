@@ -113,6 +113,15 @@ const getPostById = async (postId: number, userId?: number) => {
         }
     });
 
+    await prisma.post.update({
+        where: {
+            id: postId,
+        },
+        data: {
+            views: post.views + 1,
+        }
+    })
+
     // 지금 요청을 한 이 사람이 이 글에 대해 투표를 했는지 안 했는지
     let hasVoted = false;
     if (userId) {
@@ -131,6 +140,7 @@ const getPostById = async (postId: number, userId?: number) => {
 
     return {
         ...post,
+        views: post.views + 1,
         vote: {
             option1Count,
             option2Count,
