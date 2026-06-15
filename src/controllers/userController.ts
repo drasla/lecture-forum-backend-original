@@ -8,6 +8,32 @@ import { UpdateUserInputType } from "../schemas/user/updateUserSchema.ts";
 import { UpdatePasswordInputType } from "../schemas/user/updatePasswordSchema.ts";
 import { WithdrawUserInputType } from "../schemas/user/withdrawUserSchema.ts";
 
+const getUser = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ message: "인증되지 않은 사용자입니다." });
+            return;
+        }
+        const userId = req.user.id;
+
+        const result = await userService.getUserById(userId);
+
+        res.status(200).json({
+            message: "사용자 정보를 성공적으로 조회했습니다.",
+            data: result,
+        });
+    } catch (error) {
+        if (error instanceof Error) {
+            if (error.message === "NOT_FOUND_USER") {
+                res.status(404).json({ message: "해당 사용자를 찾을 수 없습니다." });
+                return;
+            }
+        }
+        console.log(error);
+        res.status(500).json({ message: "사용자 정보 조회 중 서버 에러가 발생했습니다." });
+    }
+};
+
 const createUser = async (req: Request, res: Response) => {
     try {
         // 프론트엔드가 요청한 정보를 꺼냄
@@ -211,6 +237,7 @@ const withdrawUser = async (req: AuthRequest, res: Response) => {
 };
 
 export default {
+    getUser,
     createUser,
     login,
     updateUser,

@@ -10,6 +10,7 @@ import { withdrawUserSchema } from "../schemas/user/withdrawUserSchema.ts";
 
 const router = Router();
 
+router.get("/me", authenticate, userController.getUser);
 router.post("/create", validate(createUserSchema), userController.createUser);
 router.post("/login", validate(loginSchema), userController.login);
 router.patch("/update", authenticate, validate(updateUserSchema), userController.updateUser);
