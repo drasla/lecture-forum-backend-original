@@ -1,14 +1,33 @@
 import prisma from "../config/prisma.ts";
-import { PostCreateInput, PostUpdateInput } from "../generated/prisma/models/Post.ts";
+import { PostCreateInput } from "../generated/prisma/models/Post.ts";
 
-const getPostByCategory = async (categoryId: number, page: number = 1, size: number = 10) => {
+const getPostsByCategory = async (categoryId: number, page: number, size: number) => {
     const skip = (page - 1) * size;
 
-    const whereCondition = {
-        categoryId,
-        deletedAt: null,
-    };
+    // SELECT * FROM post WHERE categoryId = categoryId AND deletedAt = NULL ORDER BY id DESC
+    const list = await prisma.post.findMany({
+        where: {
+            categoryId,
+            deletedAt: null,
+        },
+        orderBy: {
+            id: "desc",
+        },
+        skip,
+        take: size,
+        include: {
+            // user: true,     => 연관된 user 테이블의 정보를 싹 긁어옴
+            user: {
+                select: {
+                    id: true,
+                    nickname: true,
+                    email: true,
+                },
+            },
+        },
+    });
 
+    // SELECT COUNT(*) FROM post WHERE categoryId = categoryId AND deletedAt = NULL
     const total = await prisma.post.count({
         where: {
             categoryId,
@@ -16,29 +35,46 @@ const getPostByCategory = async (categoryId: number, page: number = 1, size: num
         },
     });
 
-    const list = await prisma.post.findMany({
-        where: whereCondition,
-        skip,
+    return {
+        page,
+        size,
+        total,
+        list,
+    };
+};
+
+const getRecentPosts = async (size: number) => {
+    return prisma.post.findMany({
+        where: {
+            deletedAt: null
+        },
+        orderBy: {
+            id: "desc"
+        },
         take: size,
-        orderBy: { id: "desc" },
         include: {
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                }
+            },
             user: {
                 select: {
                     id: true,
                     nickname: true,
-                    name: true,
-                },
-            },
-        },
+                    email: true,
+                }
+            }
+        }
     });
+}
 
-    return { total, list };
-};
-
-const getPostById = async (id: number, userId?: number) => {
-    const post = await prisma.post.findFirst({
+const getPostById = async (postId: number, userId?: number) => {
+    // SELECT를 했는데 자료가 검색이 안되면, 어차피 post라는 변수엔 null임
+    const post = await prisma.post.findUnique({
         where: {
-            id,
+            id: postId,
             deletedAt: null,
         },
         include: {
@@ -46,190 +82,141 @@ const getPostById = async (id: number, userId?: number) => {
                 select: {
                     id: true,
                     nickname: true,
-                    name: true,
-                },
-            },
-            category: {
-                select: {
-                    id: true,
-                    name: true,
-                },
-            },
-        },
+                    email: true,
+                }
+            }
+        }
     });
 
     if (!post) {
+        // 이 아래쪽으로는 진행을 못 하도록 막기 위해, return을 쳐줌
         return null;
     }
 
+    // 이 글의 투표에 대한 내용을 불러와야 함
+    // 그럼 post에서 검색해올 때 votes를 쓰면 되지 않나? 라고 할 수 있는데
+    // 이렇게 votes에 vote 테이블에 있는 정보를 덧붙이면(JOIN하면)
+    // 누가. 몇 번에. 투표했는지 정보가 다 노출됨
+    // 우리가 필요한건 1번에 몇 명, 2번에 몇 명 투표했는지만 필요하지
+    // 누가 몇 번에 투표했는가에 대한 정보는 필요 없음
+
     const option1Count = await prisma.vote.count({
-        where: { postId: id, option: 1 },
+        where: {
+            postId: postId,
+            option: 1,
+        }
     });
-
     const option2Count = await prisma.vote.count({
-        where: { postId: id, option: 2 },
+        where: {
+            postId: postId,
+            option: 2,
+        }
     });
 
+    // 지금 요청을 한 이 사람이 이 글에 대해 투표를 했는지 안 했는지
     let hasVoted = false;
     if (userId) {
+        // findFirst는 조건에 맞는 첫 번째 데이터를 찾음
         const myVote = await prisma.vote.findFirst({
             where: {
                 userId: userId,
-                postId: id,
-            },
+                postId: postId,
+            }
         });
-
 
         if (myVote) {
             hasVoted = true;
         }
     }
 
-    await prisma.post.update({
-        where: {
-            id,
-        },
-        data: {
-            views: { increment: 1 },
-        },
-    });
-
     return {
         ...post,
-        views: post.views + 1,
-        vote: { option1Count, option2Count, totalCount: option1Count + option2Count, hasVoted },
+        vote: {
+            option1Count,
+            option2Count,
+            totalCount: option1Count + option2Count,
+            hasVoted,
+        }
     };
 };
 
-const createPost = async (data: PostCreateInput) => {
+const createPost = async (postData: PostCreateInput) => {
+    // INSERT 쿼리를 전송
     return prisma.post.create({
-        data,
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    nickname: true,
-                    name: true,
-                },
-            },
-            category: {
-                select: {
-                    id: true,
-                    name: true,
-                },
-            },
-        },
-    });
-};
-
-const updatePost = async (id: number, userId: number, data: PostUpdateInput) => {
-    const post = await prisma.post.findFirst({
-        where: { id, deletedAt: null },
-    });
-
-    if (!post) {
-        throw new Error("NOT_FOUND"); // 게시글이 없거나 삭제됨
-    }
-
-    if (post.userId !== userId) {
-        throw new Error("FORBIDDEN"); // 작성자가 아님
-    }
-
-    // 2. 권한이 확인되면 업데이트 수행
-    return prisma.post.update({
-        where: { id },
-        data,
-        include: {
-            user: { select: { id: true, nickname: true, name: true } },
-            category: { select: { id: true, name: true } },
-        },
-    });
-};
-
-const deletePost = async (id: number, userId: number) => {
-    const post = await prisma.post.findFirst({
-        where: { id, deletedAt: null },
-    });
-
-    if (!post) {
-        throw new Error("NOT_FOUND");
-    }
-
-    if (post.userId !== userId) {
-        throw new Error("FORBIDDEN"); // 작성자가 아니면 삭제 불가
-    }
-
-    // 2. 소프트 삭제 처리 (deletedAt에 현재 시간 기록)
-    return prisma.post.update({
-        where: { id },
-        data: {
-            deletedAt: new Date(),
-        },
+        data: postData,
     });
 };
 
 const votePost = async (postId: number, userId: number, option: number) => {
-    // 1. 게시글 존재 및 삭제 여부 확인
+    // 1. postId의 글이 존재 유무 (소프트삭제도 고려)
     const post = await prisma.post.findFirst({
-        where: { id: postId, deletedAt: null },
+        where: {
+            id: postId,
+            deletedAt: null,
+        }
     });
 
     if (!post) {
         throw new Error("NOT_FOUND");
     }
 
-    // 2. 투표가 활성화된 게시글인지 확인
+    // 2. option1Text와 option2Text가 있는지 체크
     if (!post.option1Text || !post.option2Text) {
         throw new Error("NOT_VOTABLE");
     }
 
-    // 3. 이미 투표했는지 확인 (DB 복합 유니크 제약조건을 서비스 단에서 한 번 더 검증)
+    // 3. 이 사용자가 투표를 이미 진행했는지 체크
     const existingVote = await prisma.vote.findUnique({
         where: {
-            userId_postId: { userId, postId },
-        },
+            userId_postId: { userId, postId }
+        }
     });
-
     if (existingVote) {
         throw new Error("ALREADY_VOTED");
     }
 
-    // 4. 모든 검증을 통과하면 투표 기록 생성
     return prisma.vote.create({
         data: {
             userId,
             postId,
             option,
-        },
-    });
-};
+        }
+    })
+}
 
-const deleteVote = async (postId: number, userId: number) => {
-    // 1. 유저의 투표 내역이 존재하는지 확인
-    const vote = await prisma.vote.findUnique({
+const cancelVotePost = async (postId: number, userId: number) => {
+    // service는 에러를 어디에서 처리할지를 내가 결정해서
+    // try - catch 을 선택적으로 사용 가능
+    const existVote = await prisma.vote.findUnique({
         where: {
-            userId_postId: { userId, postId },
-        },
+            userId_postId: { userId, postId}
+        }
     });
-
-    if (!vote) {
-        throw new Error("NOT_VOTED"); // 취소할 투표가 없음
+    if (!existVote) {
+        throw new Error("NOT_VOTED");
     }
 
-    // 2. 투표 내역 삭제
-    return prisma.vote.delete({
+    // 실제 삭제가 이루어져야 함
+    await prisma.vote.delete({
         where: {
-            userId_postId: { userId, postId },
-        },
+            userId_postId: { userId, postId }
+        }
     });
-};
+    return;
+
+    // const result = await prisma.vote.create({ data: {}})     => 그렇게 생성된 vote 객체 (후결과)
+    // const result = await prisma.vote.update({ where: {}, data: {}})   => 그렇게 업데이트된 vote 객체 (후결과)
+    // const result = await prisma.vote.findFirst({ where: {}})   => 그렇게 검색한 vote 객체 => 없으면 null
+    // const result = await prisma.vote.findUnique({ where: {}})  => 그렇게 검색한 vote 객체 => 없으면 null
+    // const result = await prisma.vote.findMany({ where: {}}) => 그렇게 검색한 vote Array => 없으면 []
+    // const result = await prisma.vote.delete({ where: {}}) => 그렇게 삭제된 vote 객체 (전내용)
+}
 
 export default {
-    getPostByCategory,
-    getPostById,
+    getPostsByCategory,
+    getRecentPosts,
     createPost,
-    updatePost,
-    deletePost,
+    getPostById,
     votePost,
-    deleteVote,
+    cancelVotePost,
 };

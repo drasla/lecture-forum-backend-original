@@ -98,7 +98,7 @@ const deleteInquiry = async (req: Request<{ inquiryId: string }>, res: Response)
 
         await inquiryService.answerInquiry(inquiryId);
         res.status(200).json({
-            message: "문의 삭제 작업 성공",
+            message: "문의 삭제 작업 성공"
         });
     } catch (error) {
         if (error instanceof Error) {

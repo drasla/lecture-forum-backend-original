@@ -1,59 +1,78 @@
 import prisma from "../config/prisma.ts";
 
-// 💡 1. 공지사항 생성
-const createNotice = async (title: string, content: string) => {
-    return prisma.notice.create({
-        data: { title, content },
-    });
-};
-
-// 💡 2. 공지사항 목록 조회 (페이지네이션)
-const getNotices = async (page: number = 1, size: number = 10) => {
-    const skip = (page - 1) * size;
-
-    const total = await prisma.notice.count();
-    const list = await prisma.notice.findMany({
-        skip,
-        take: size,
-        orderBy: { id: "desc" }, // 최신 공지가 위로 오도록 정렬
-    });
-
-    return { total, list };
-};
-
-// 💡 3. 공지사항 상세 조회
 const getNoticeById = async (id: number) => {
     const notice = await prisma.notice.findUnique({
-        where: { id },
+        where: {
+            id,
+        },
     });
-    if (!notice) throw new Error("NOT_FOUND");
+    if (!notice) {
+        throw new Error("NOT_FOUND_NOTICE");
+    }
     return notice;
 };
 
-// 💡 4. 공지사항 수정
-const updateNotice = async (id: number, title: string, content: string) => {
-    // 존재 여부 먼저 확인
-    await getNoticeById(id);
+const getNoticeList = async (page: number, size: number) => {
+    // prisma에게 페이지네이션을 하기 위해
+    // skip과 take를 전달해줘야 하는데
+    // take는 말 그대로 가져와야 되는 갯수를 뜻하고
+    // skip은 데이터를 지나치는 갯수를 뜻함
+    // (내가 3페이지를 보고 싶으니, 30개 데이터 이후의 15개를 가져와라)
 
-    return prisma.notice.update({
-        where: { id },
-        data: { title, content },
+    const list = await prisma.notice.findMany({
+        orderBy: { id: "desc" },
+        skip: (page - 1) * size,
+        take: size,
+    });
+    const total = await prisma.notice.count();
+
+    return {
+        total,
+        list,
+    };
+};
+
+const createNotice = async (title: string, content: string) => {
+    return prisma.notice.create({
+        data: {
+            title,
+            content,
+        },
     });
 };
 
-// 💡 5. 공지사항 삭제
-const deleteNotice = async (id: number) => {
+const updateNotice = async (id: number, title: string, content: string) => {
+    // 그 Notice 글이 살아있는지 체크
     await getNoticeById(id);
 
+    // 업데이트를 진행해야 함
+    return prisma.notice.update({
+        where: {
+            id,
+        },
+        data: {
+            title,
+            content,
+        },
+    });
+};
+
+const deleteNotice = async (id: number) => {
+    // Notice 글이 살아있는지 체크
+    await getNoticeById(id);
+
+    // Notice 글을 삭제
     return prisma.notice.delete({
-        where: { id },
+        where: {
+            id,
+        },
     });
 };
 
 export default {
-    createNotice,
-    getNotices,
     getNoticeById,
+    getNoticeList,
+    createNotice,
     updateNotice,
     deleteNotice,
 };

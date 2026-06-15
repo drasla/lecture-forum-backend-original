@@ -3,7 +3,9 @@ import noticeController from "../controllers/noticeController.ts";
 
 const router = Router();
 
-router.get("/list", noticeController.getNotices);
-router.get("/:id", noticeController.getNoticeById);
+// 글 목록을 조회 : /notice/list
+router.get("/list", noticeController.getNoticeList);
+// 글 내용 조회 : /notice/4
+router.get("/:noticeId", noticeController.getNoticeById);
 
 export default router;

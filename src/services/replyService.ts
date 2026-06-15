@@ -1,32 +1,8 @@
 import prisma from "../config/prisma.ts";
 
-// 💡 1. 댓글 작성
-const createReply = async (postId: number, userId: number, content: string) => {
-    // 게시글이 존재하는지, 삭제되진 않았는지 확인
-    const post = await prisma.post.findFirst({
-        where: { id: postId, deletedAt: null },
-    });
-
-    if (!post) {
-        throw new Error("NOT_FOUND_POST");
-    }
-
-    return prisma.reply.create({
-        data: {
-            content,
-            postId,
-            userId,
-        },
-        include: {
-            user: {
-                select: { id: true, nickname: true },
-            },
-        },
-    });
-};
-
-// 💡 2. 특정 게시글의 댓글 목록 조회 (오래된 순 정렬)
-const getRepliesByPostId = async (postId: number, page: number = 1, size: number = 10) => {
+const getRepliesByPostId = async (postId: number, page: number, size: number) => {
+    // 목록을 불러오는 목적의 service니까
+    // pagination도 해야되는구나 => skip, take를 써야됨
     const skip = (page - 1) * size;
 
     const total = await prisma.reply.count({
@@ -34,65 +10,110 @@ const getRepliesByPostId = async (postId: number, page: number = 1, size: number
     });
 
     const list = await prisma.reply.findMany({
-        where: { postId },
-        skip,
+        where: {
+            postId,
+        },
         take: size,
-        orderBy: { id: "asc" }, // 일반적인 커뮤니티처럼 먼저 쓴 댓글이 위에 오도록 정렬
+        skip,
+        orderBy: { id: "desc" },
         include: {
             user: {
-                select: { id: true, nickname: true },
+                select: {
+                    id: true,
+                    nickname: true,
+                },
             },
         },
     });
 
-    return { total, list };
+    return {
+        page,
+        size,
+        total,
+        list,
+    };
+};
+
+const createReply = async (userId: number, postId: number, content: string) => {
+    // 이 댓글이 달릴 글이 살아있는 글인가를 체크를 먼저 함
+    // 그러면 왜 userId 살아있는 사용자는 체크 안하나요?
+    // 왜냐하면, authenticate 미들웨어가 이미 사용자는 살아있는지 체크를 했기 때문
+    const post = await prisma.post.findFirst({
+        where: {
+            id: postId,
+            deletedAt: null,
+        },
+    });
+
+    if (!post) {
+        throw new Error("NOT_FOUND");
+    }
+
+    return prisma.reply.create({
+        data: {
+            userId,
+            postId,
+            content,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    nickname: true,
+                    email: true,
+                },
+            },
+        },
+    });
+    // 이렇게 prisma.reply.create()를 실행하면, 생성"된" Reply 객체가 리턴
 };
 
 const updateReply = async (id: number, userId: number, content: string) => {
-    // 1. 수정할 댓글이 존재하는지 확인
     const reply = await prisma.reply.findUnique({
-        where: { id },
+        where: {
+            id,
+        },
     });
-
     if (!reply) {
         throw new Error("NOT_FOUND_REPLY");
     }
-
-    // 2. 본인이 작성한 댓글인지 확인 (권한 검증)
     if (reply.userId !== userId) {
         throw new Error("FORBIDDEN");
     }
 
-    // 3. 내용 업데이트
     return prisma.reply.update({
-        where: { id },
-        data: { content },
+        where: {
+            id,
+        },
+        data: {
+            content,
+        }
     });
-};
+}
 
-// 💡 3. 댓글 완전 삭제 (하드 삭제)
 const deleteReply = async (id: number, userId: number) => {
     const reply = await prisma.reply.findUnique({
-        where: { id },
+        where: {
+            id
+        }
     });
-
     if (!reply) {
         throw new Error("NOT_FOUND_REPLY");
     }
-
     if (reply.userId !== userId) {
-        throw new Error("FORBIDDEN"); // 본인이 쓴 댓글만 삭제 가능
+        throw new Error("FORBIDDEN");
     }
 
-    // 하드 삭제 진행
     return prisma.reply.delete({
-        where: { id },
+        where: {
+            id
+        }
     });
-};
+}
 
 export default {
-    createReply,
     getRepliesByPostId,
+    createReply,
     updateReply,
     deleteReply,
 };

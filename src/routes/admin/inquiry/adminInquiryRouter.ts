@@ -1,7 +1,8 @@
 import { Router } from "express";
-import adminInquiryController from "../../controllers/admin/adminInquiryController.ts";
-import { validate } from "../../middlewares/validate.ts";
-import { inquiryAnswerSchema } from "../../schemas/inquiry/inquiryAnswerSchema.ts";
+import adminInquiryController from "../../../controllers/admin/adminInquiryController.ts";
+import { validate } from "../../../middlewares/validate.ts";
+import { inquiryAnswerSchema } from "../../../schemas/inquiry/inquiryAnswerSchema.ts";
+
 const router = Router();
 
 router.get("/list", adminInquiryController.getInquiryList);
